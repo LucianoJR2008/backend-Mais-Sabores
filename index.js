@@ -21,11 +21,11 @@ app.get("/pedidos", async (req, res)=>{
 })
 
 app.post("/pedidos", async(req, res)=>{
-    const { tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2 } = req.body // exemplo de colunas
+    const { tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco } = req.body // exemplo de colunas
 
     const result = await pool.query(
-      "INSERT INTO pedidos (tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *",
-      [tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2]
+      "INSERT INTO pedidos (tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+      [tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco]
     );
     res.send("Obrigado pelo pedido")
 })
