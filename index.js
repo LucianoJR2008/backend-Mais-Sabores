@@ -21,6 +21,7 @@ app.get("/pedidos", async (req, res)=>{
 })
 
 app.post("/pedidos", async(req, res)=>{
+    console.log(req,body)
     const { tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco } = req.body // exemplo de colunas
 
     const result = await pool.query(
@@ -30,3 +31,28 @@ app.post("/pedidos", async(req, res)=>{
     res.send("Obrigado pelo pedido")
 })
 
+// Atualizar status para "cancelado"
+app.post("/pedidos/:id/cancelar", async (req, res) => {
+  const { id } = req.params;
+  const { mensagem } = req.body;
+
+  await pool.query("UPDATE pedidos SET status = 'cancelado' WHERE id = $1", [id]);
+
+  console.log(`Pedido ${id} cancelado. Mensagem ao cliente: ${mensagem}`);
+
+  res.json({ sucesso: true });
+});
+
+// Atualizar status para "aceito" + adicionar preço e tempo
+app.post("/pedidos/:id/aceitar", async (req, res) => {
+  const { id } = req.params;
+  const { preco, tempo } = req.body;
+
+  await pool.query(
+    "UPDATE pedidos SET status = 'aceito', preco = $1, tempo_entrega = $2 WHERE id = $3",
+    [preco, tempo, id]
+  );
+
+  console.log(`Pedido ${id} aceito. Preço: ${preco}, Tempo: ${tempo}min`);
+  res.json({ sucesso: true });
+});
