@@ -20,17 +20,16 @@ app.get("/pedidos", async (req, res)=>{
     res.json(result.rows)
 })
 
-app.post("/pedidos", async (req, res) => {
-  const { tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco } = req.body;
+app.post("/pedidos", async(req, res)=>{
+    console.log(req,body)
+    const { tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco } = req.body // exemplo de colunas
 
-  const result = await pool.query(
-    "INSERT INTO pedidos (tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
-    [tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco]
-  );
-
-  res.json(result.rows[0]); // retorna o pedido criado com o ID
-});
-
+    const result = await pool.query(
+      "INSERT INTO pedidos (tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+      [tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco]
+    );
+    res.send("Obrigado pelo pedido")
+})
 
 // Atualizar status para "cancelado"
 app.post("/pedidos/:id/cancelar", async (req, res) => {
