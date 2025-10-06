@@ -21,7 +21,6 @@ app.get("/pedidos", async (req, res)=>{
 })
 
 app.post("/pedidos", async(req, res)=>{
-    console.log(req,body)
     const { tamanho,sabor,refrigerante,borda,tipo,sabor1,sabor2,endereco } = req.body // exemplo de colunas
 
     const result = await pool.query(
@@ -30,3 +29,4 @@ app.post("/pedidos", async(req, res)=>{
     );
     res.send("Obrigado pelo pedido")
 })
+
