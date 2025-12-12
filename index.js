@@ -1,104 +1,127 @@
-const express = require('express');
-const { Pool } = require("pg");
-const cors = require("cors");
+// =========================
+//  BACKEND COMPLETO
+// =========================
 
+import express from "express";
+import cors from "cors";
+import pkg from "pg";
+import multer from "multer";
+
+const { Pool } = pkg;
 const app = express();
-app.use(express.json()); // permite receber JSON no body
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
 app.use(cors());
 
-// 🗃️ Conexão com o banco Neon
+// =========================
+//  CONEXÃO COM O NEON
+// =========================
 const pool = new Pool({
-    connectionString: 'postgresql://neondb_owner:npg_aK3mgp1nZJND@ep-proud-fire-acuievu5-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+    connectionString: "COLE_AQUI_SUA_DATABASE_URL_DO_NEON",
     ssl: { rejectUnauthorized: false }
 });
 
-// 🚀 Iniciar servidor
-app.listen(8080, () => {
-    console.log("✅ O servidor foi aberto na porta 8080");
+// =========================
+//  CONFIGURAR UPLOAD (multer)
+// =========================
+const upload = multer();
+
+// =========================
+//  ROTAS DE PEDIDOS
+// =========================
+
+// Criar pedido
+app.post("/pedidos", async (req, res) => {
+    try {
+        const {
+            tamanho, sabor, refrigerante, borda,
+            tipo, sabor1, sabor2, endereco,
+            quantidade, preco, tempo_entrega
+        } = req.body;
+
+        const result = await pool.query(
+            `INSERT INTO pedidos 
+            (tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco,
+            quantidade, preco, tempo_entrega, status)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pendente')
+            RETURNING id`,
+            [tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco,
+            quantidade, preco, tempo_entrega]
+        );
+
+        res.json({ sucesso: true, id: result.rows[0].id });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ sucesso: false });
+    }
 });
 
-
-// 📦 Buscar todos os pedidos
+// Listar pedidos
 app.get("/pedidos", async (req, res) => {
-    const result = await pool.query("SELECT * FROM pedidos");
+    const result = await pool.query("SELECT * FROM pedidos ORDER BY id DESC");
     res.json(result.rows);
 });
 
+// Buscar pedido por ID (para página de status)
+app.get("/pedidos/:id", async (req, res) => {
+    const { id } = req.params;
 
-// 📝 Criar um novo pedido
-app.post("/pedidos", async (req, res) => {
-    const { tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco } = req.body;
+    const result = await pool.query("SELECT * FROM pedidos WHERE id = $1", [id]);
 
-    await pool.query(
-        "INSERT INTO pedidos (tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
-        [tamanho, sabor, refrigerante, borda, tipo, sabor1, sabor2, endereco]
-    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ erro: "Pedido não encontrado" });
+    }
 
-    res.send("🍕 Obrigado pelo pedido!");
+    res.json(result.rows[0]);
 });
 
+// Alterar status do pedido
+app.patch("/pedidos/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
 
-// ❌ Cancelar pedido
-app.post("/pedidos/:id/cancelar", async (req, res) => {
+    await pool.query(
+        "UPDATE pedidos SET status = $1 WHERE id = $2",
+        [status, id]
+    );
+
+    res.json({ sucesso: true });
+});
+
+// Enviar mensagem ao cliente (usado no painel admin)
+app.post("/pedidos/:id/mensagem", async (req, res) => {
     const { id } = req.params;
     const { mensagem } = req.body;
 
-    await pool.query("UPDATE pedidos SET status = 'cancelado' WHERE id = $1", [id]);
-    console.log(`❌ Pedido ${id} cancelado. Mensagem: ${mensagem}`);
+    console.log(`Mensagem para o cliente do pedido ${id}: ${mensagem}`);
 
     res.json({ sucesso: true });
 });
 
+// =========================
+//  ROTAS DE SUGESTÕES
+// =========================
 
-// ✅ Aceitar pedido (com preço e tempo)
-app.post("/pedidos/:id/aceitar", async (req, res) => {
-    const { id } = req.params;
-    const { preco, tempo } = req.body;
-
-    await pool.query(
-        "UPDATE pedidos SET status = 'aceito', preco = $1, tempo_entrega = $2 WHERE id = $3",
-        [preco, tempo, id]
-    );
-
-    console.log(`✅ Pedido ${id} aceito. Preço: ${preco}, Tempo: ${tempo}min`);
-    res.json({ sucesso: true });
-});
-
-
-// 💡 Enviar sugestão
-app.post("/sugestoes", async (req, res) => {  // <- CORRIGIDO: o nome da rota estava errado e sem a barra "/"
+// Enviar sugestão
+app.post("/sugestoes", async (req, res) => {
     const { texto } = req.body;
 
-    if (!texto || texto.trim() === "") {
-        return res.status(400).json({ error: "Digite uma sugestão válida!" }); // <- CORRIGIDO: não existe "return.res"
-    }
+    await pool.query("INSERT INTO sugestoes (texto) VALUES ($1)", [texto]);
 
-    try {
-        await pool.query("INSERT INTO sugestoes (texto) VALUES ($1)", [texto]);
-        res.json({ message: "💬 Sugestão enviada com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao inserir sugestão:", error);
-        res.status(500).json({ error: "Erro ao salvar sugestão no banco." });
-    }
+    res.json({ sucesso: true });
 });
 
-
-// 🔍 Listar sugestões (admin/teste)
+// Listar sugestões
 app.get("/sugestoes", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM sugestoes ORDER BY criado_em DESC");
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Erro ao buscar sugestões:", error);
-        res.status(500).json({ error: "Erro ao buscar sugestões." });
-    }
+    const result = await pool.query("SELECT * FROM sugestoes ORDER BY id DESC");
+    res.json(result.rows);
+});
 
+// =========================
+//  ROTAS DO CARDÁPIO
+// =========================
 
-    // Para receber FormData
-const multer = require("multer");
-const upload = multer();
-
+// Upload da imagem do cardápio
 app.post("/admin/upload-cardapio", upload.single("imagemCardapio"), async (req, res) => {
     try {
         const file = req.file;
@@ -121,9 +144,17 @@ app.post("/admin/upload-cardapio", upload.single("imagemCardapio"), async (req, 
         res.status(500).json({ sucesso: false });
     }
 });
+
+// Buscar imagem do cardápio
 app.get("/configuracoes/cardapio-url", async (req, res) => {
     const result = await pool.query("SELECT imagem_cardapio_url FROM configuracoes WHERE id = 1");
-    res.json(result.rows[0]);
+
+    res.json({ url: result.rows[0]?.imagem_cardapio_url || null });
 });
 
+// =========================
+//  RODAR SERVIDOR
+// =========================
+app.listen(3000, () => {
+    console.log("Servidor rodando na porta 3000");
 });
