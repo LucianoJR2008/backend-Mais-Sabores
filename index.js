@@ -93,4 +93,33 @@ app.get("/sugestoes", async (req, res) => {
         console.error("Erro ao buscar sugestões:", error);
         res.status(500).json({ error: "Erro ao buscar sugestões." });
     }
+
+
+    // Para receber FormData
+const multer = require("multer");
+const upload = multer();
+
+app.post("/admin/upload-cardapio", upload.single("imagemCardapio"), async (req, res) => {
+    try {
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ sucesso: false, mensagem: "Nenhuma imagem enviada" });
+        }
+
+        const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+
+        await pool.query(
+            "UPDATE configuracoes SET imagem_cardapio_url = $1 WHERE id = 1",
+            [base64]
+        );
+
+        res.json({ sucesso: true, url: base64 });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ sucesso: false });
+    }
+});
+
 });
