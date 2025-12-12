@@ -121,5 +121,9 @@ app.post("/admin/upload-cardapio", upload.single("imagemCardapio"), async (req, 
         res.status(500).json({ sucesso: false });
     }
 });
+app.get("/configuracoes/cardapio-url", async (req, res) => {
+    const result = await pool.query("SELECT imagem_cardapio_url FROM configuracoes WHERE id = 1");
+    res.json(result.rows[0]);
+});
 
 });
